@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Login · Campus Connect</title>
+    <link rel="stylesheet" href="css/style.css">
+  </head>
+  <body>
+    <div class="auth">
+      <section class="auth-side">
+        <div class="brand">
+          <span class="brand-mark">CC</span>
+          <div>
+            Campus Connect
+            <small>College community platform</small>
+          </div>
+        </div>
+
+        <h1>Welcome back.</h1>
+        <p>Sign in to join your campus community.</p>
+      </section>
+
+      <section class="auth-card">
+        <div class="auth-box">
+          <h2>Login</h2>
+          <p>Use your registered email and password.</p>
+
+          <div id="message" class="alert error" aria-live="polite" hidden></div>
+
+          <form id="login-form" class="form-grid">
+            <div class="field">
+              <label for="email">Email</label>
+              <input id="email" type="email" autocomplete="email" required>
+            </div>
+
+            <div class="field">
+              <label for="password">Password</label>
+              <input id="password" type="password" autocomplete="current-password" required>
+            </div>
+
+            <button class="btn" type="submit">Login</button>
+          </form>
+
+          <div class="auth-foot">
+            <a class="auth-link" href="reset.html">Forgot password?</a>
+            <br><br>
+            New here? <a class="auth-link" href="register.html">Create an account</a>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <script type="module" src="js/auth.js"></script>
+  </body>
+</html>
