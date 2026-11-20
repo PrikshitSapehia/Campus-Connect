@@ -1,114 +1,114 @@
-rules_version = '2';
+  rules_version = '2';
 
-service cloud.firestore {
-  match /databases/{database}/documents {
+  service cloud.firestore {
+    match /databases/{database}/documents {
 
-    function signedIn() {
-      return request.auth != null;
-    }
+      function signedIn() {
+        return request.auth != null;
+      }
 
-    function isOwner(userId) {
-      return signedIn() && request.auth.uid == userId;
-    }
+      function isOwner(userId) {
+        return signedIn() && request.auth.uid == userId;
+      }
 
-    function isAdmin() {
+      function isAdmin() {
+        return signedIn()
+          && get(
+            /databases/$(database)/documents/users/$(request.auth.uid)
+          ).data.role == "admin";
+      }
+
+      // User profiles
+      match /users/{userId} {
+        allow create: if isOwner(userId)
+          && request.resource.data.role == "user";
+
+        allow read: if isOwner(userId) || isAdmin();
+
+        allow update: if (
+            isOwner(userId)
+            && request.resource.data.role == resource.data.role
+          ) || isAdmin();
+
+        allow delete: if isAdmin();
+      }
+
+      // Community messages
+      match /messages/{messageId} {
+        allow read: if signedIn();
+
+        allow create: if signedIn()
+          && request.resource.data.uid == request.auth.uid;
+
+        allow update, delete: if signedIn()
+          && (
+            resource.data.uid == request.auth.uid
+            || isAdmin()
+          );
+      }
+
+  match /posts/{postId} {
+    allow read: if signedIn();
+
+    allow create: if signedIn()
+      && request.resource.data.uid == request.auth.uid;
+
+    // Allow users to like or unlike posts
+    function canToggleLike() {
       return signedIn()
-        && get(
-          /databases/$(database)/documents/users/$(request.auth.uid)
-        ).data.role == "admin";
-    }
-
-    // User profiles
-    match /users/{userId} {
-      allow create: if isOwner(userId)
-        && request.resource.data.role == "user";
-
-      allow read: if isOwner(userId) || isAdmin();
-
-      allow update: if (
-          isOwner(userId)
-          && request.resource.data.role == resource.data.role
-        ) || isAdmin();
-
-      allow delete: if isAdmin();
-    }
-
-    // Community messages
-    match /messages/{messageId} {
-      allow read: if signedIn();
-
-      allow create: if signedIn()
-        && request.resource.data.uid == request.auth.uid;
-
-      allow update, delete: if signedIn()
+        && resource.data.likes is list
+        && request.resource.data.likes is list
+        && request.resource.data.diff(resource.data)
+            .affectedKeys().hasOnly(['likes'])
         && (
-          resource.data.uid == request.auth.uid
-          || isAdmin()
+          (
+            request.resource.data.likes.toSet()
+              .difference(resource.data.likes.toSet())
+              .hasOnly([request.auth.uid])
+            &&
+            resource.data.likes.toSet()
+              .difference(request.resource.data.likes.toSet())
+              .size() == 0
+          )
+          ||
+          (
+            resource.data.likes.toSet()
+              .difference(request.resource.data.likes.toSet())
+              .hasOnly([request.auth.uid])
+            &&
+            request.resource.data.likes.toSet()
+              .difference(resource.data.likes.toSet())
+              .size() == 0
+          )
         );
     }
 
-match /posts/{postId} {
-  allow read: if signedIn();
-
-  allow create: if signedIn()
-    && request.resource.data.uid == request.auth.uid;
-
-  // Allow users to like or unlike posts
-  function canToggleLike() {
-    return signedIn()
-      && resource.data.likes is list
-      && request.resource.data.likes is list
-      && request.resource.data.diff(resource.data)
-          .affectedKeys().hasOnly(['likes'])
+    allow update: if (
+      signedIn()
       && (
-        (
-          request.resource.data.likes.toSet()
-            .difference(resource.data.likes.toSet())
-            .hasOnly([request.auth.uid])
-          &&
-          resource.data.likes.toSet()
-            .difference(request.resource.data.likes.toSet())
-            .size() == 0
-        )
-        ||
-        (
-          resource.data.likes.toSet()
-            .difference(request.resource.data.likes.toSet())
-            .hasOnly([request.auth.uid])
-          &&
-          request.resource.data.likes.toSet()
-            .difference(resource.data.likes.toSet())
-            .size() == 0
-        )
+        resource.data.uid == request.auth.uid
+        || isAdmin()
+      )
+    ) || canToggleLike();
+
+    allow delete: if signedIn()
+      && (
+        resource.data.uid == request.auth.uid
+        || isAdmin()
       );
   }
 
-  allow update: if (
-    signedIn()
-    && (
-      resource.data.uid == request.auth.uid
-      || isAdmin()
-    )
-  ) || canToggleLike();
+      // Student reports
+      match /reports/{reportId} {
+        allow create: if signedIn()
+          && request.resource.data.uid == request.auth.uid;
 
-  allow delete: if signedIn()
-    && (
-      resource.data.uid == request.auth.uid
-      || isAdmin()
-    );
-}
+        allow read, update, delete: if isAdmin();
+      }
 
-    // Student reports
-    match /reports/{reportId} {
-      allow create: if signedIn()
-        && request.resource.data.uid == request.auth.uid;
-
-      allow read, update, delete: if isAdmin();
-    }
-
-    // Deny everything else
-    match /{document=**} {
-      allow read, write: if false;
+      // Deny everything else
+      match /{document=**} {
+        allow read, write: if false;
+      }
     }
   }
-}
